@@ -5,9 +5,10 @@ import { VideoInfo } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, Clock, User, Loader2 } from "lucide-react";
+import { Star, Clock, User } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
+import { toggleFavorite } from "@/app/actions/toggle-favorite";
 
 interface VideoHeaderProps {
   videoInfo: VideoInfo;
@@ -23,7 +24,6 @@ export function VideoHeader({
   onFavoriteToggle
 }: VideoHeaderProps) {
   const { user } = useAuth();
-  const [isUpdating, setIsUpdating] = useState(false);
   const [favoriteStatus, setFavoriteStatus] = useState(isFavorite);
 
   const handleToggleFavorite = async () => {
@@ -32,35 +32,26 @@ export function VideoHeader({
       return;
     }
 
-    setIsUpdating(true);
+    setFavoriteStatus(favoriteStatus => !favoriteStatus);
+    onFavoriteToggle?.(!favoriteStatus);
     try {
-      const response = await fetch("/api/toggle-favorite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoId: videoId,
-          isFavorite: !favoriteStatus
-        }),
-      });
 
-      if (!response.ok) {
+      const response = await toggleFavorite(videoId, !favoriteStatus);     
+
+      if (!response.success) {
         throw new Error("Failed to update favorite status");
       }
 
-      const data = await response.json();
-      setFavoriteStatus(data.isFavorite);
-      onFavoriteToggle?.(data.isFavorite);
-
       toast.success(
-        data.isFavorite
+        response.isFavorite
           ? "Added to favorites"
           : "Removed from favorites"
       );
     } catch {
+      setFavoriteStatus(favoriteStatus => !favoriteStatus);
+      onFavoriteToggle?.(!favoriteStatus);
       toast.error("Failed to update favorite status");
-    } finally {
-      setIsUpdating(false);
-    }
+    } 
   };
 
   return (
@@ -88,16 +79,10 @@ export function VideoHeader({
             variant={favoriteStatus ? "default" : "outline"}
             size="sm"
             onClick={handleToggleFavorite}
-            disabled={isUpdating}
             className="flex-shrink-0"
           >
-            {isUpdating ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Star
-                className={`h-3.5 w-3.5 ${favoriteStatus ? 'fill-current' : ''}`}
-              />
-            )}
+          <Star className={`h-3.5 w-3.5 ${favoriteStatus ? 'fill-current' : ''}`} />
+
             <span className="ml-1.5">
               {favoriteStatus ? 'Favorited' : 'Favorite'}
             </span>

@@ -1,5 +1,6 @@
 "use client";
 
+import  usePlayAllStore from "@/lib/stores/play-all-store";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { RightColumnTabs, type RightColumnTabsHandle } from "@/components/right-column-tabs";
 import { YouTubePlayer } from "@/components/youtube-player";
@@ -20,6 +21,8 @@ import { useModePreference } from "@/lib/hooks/use-mode-preference";
 import { useTranslation } from "@/lib/hooks/use-translation";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useTranscriptExport } from "@/lib/hooks/use-transcript-export";
+import { VideoHeader } from "@/components/video-header";
+
 
 // Page state for better UX
 type PageState = 'IDLE' | 'ANALYZING_NEW' | 'LOADING_CACHED';
@@ -245,18 +248,8 @@ export default function AnalyzePage() {
   const activeThemeRequestIdRef = useRef<number | null>(null);
   const pendingThemeRequestsRef = useRef(new Map<string, number>());
 
-  // Play All state (lifted from YouTubePlayer)
-  const [isPlayingAll, setIsPlayingAll] = useState(false);
-  const [playAllIndex, setPlayAllIndex] = useState(0);
+  const {isPlayingAll, setIsPlayingAll,setPlayAllIndex, resetPlayAll, nextInPlayAll} = usePlayAllStore()
 
-  // Memoized setters for Play All state
-  const memoizedSetPlayAllIndex = useCallback((value: number | ((prev: number) => number)) => {
-    setPlayAllIndex(value);
-  }, []);
-
-  const memoizedSetIsPlayingAll = useCallback((value: boolean) => {
-    setIsPlayingAll(value);
-  }, []);
 
   // Takeaways generation state
   const [, setTakeawaysContent] = useState<string | null>(null);
@@ -709,8 +702,7 @@ export default function AnalyzePage() {
       setVideoDbId(null);
       setVideoPreview("");
       setPlaybackCommand(null);
-      setIsPlayingAll(false);
-      setPlayAllIndex(0);
+      resetPlayAll();
       setIsShareReady(false);
 
       // Reset takeaways-related states
@@ -1458,9 +1450,7 @@ export default function AnalyzePage() {
 
   const handleCitationClick = (citation: Citation) => {
     // Reset Play All mode when clicking a citation
-    setIsPlayingAll(false);
-    setPlayAllIndex(0);
-
+    resetPlayAll();
     setSelectedTopic(null);
     setCitationHighlight(citation);
 
@@ -1475,8 +1465,7 @@ export default function AnalyzePage() {
 
   const handleTimestampClick = (seconds: number, _endSeconds?: number, isCitation: boolean = false, _citationText?: string, isWithinHighlightReel: boolean = false, isWithinCitationHighlight: boolean = false) => {
     // Reset Play All mode when clicking any timestamp
-    setIsPlayingAll(false);
-    setPlayAllIndex(0);
+    resetPlayAll();
 
     // Handle topic selection clearing:
     // Clear topic if it's a new citation click from AI chat OR
@@ -1507,8 +1496,7 @@ export default function AnalyzePage() {
   const handleTopicSelect = useCallback((topic: Topic | null, fromPlayAll: boolean = false) => {
     // Reset Play All mode only when manually selecting a topic (not from Play All)
     if (!fromPlayAll && isPlayingAll) {
-      setIsPlayingAll(false);
-      setPlayAllIndex(0);
+      resetPlayAll();
     }
 
     // Clear citation highlight when selecting a topic
@@ -1524,8 +1512,7 @@ export default function AnalyzePage() {
   const handleTogglePlayAll = useCallback(() => {
     if (isPlayingAll) {
       // Stop playing all
-      setIsPlayingAll(false);
-      setPlayAllIndex(0);
+      resetPlayAll();
       setPlaybackCommand({ type: 'PAUSE' });
     } else {
       // Clear any existing selection to start fresh
@@ -1550,8 +1537,7 @@ export default function AnalyzePage() {
       selectedThemeRef.current = null;
       setTopics(baseTopics);
       setSelectedTopic(null);
-      setIsPlayingAll(false);
-      setPlayAllIndex(0);
+      resetPlayAll();
       setIsLoadingThemeTopics(false);
       activeThemeRequestIdRef.current = null;
       setUsedTopicKeys(new Set(baseTopicKeySet));
@@ -1594,8 +1580,7 @@ export default function AnalyzePage() {
     selectedThemeRef.current = normalizedTheme;
     setThemeError(null);
     setSelectedTopic(null);
-    setIsPlayingAll(false);
-    setPlayAllIndex(0);
+    resetPlayAll();
 
     const pendingRequestId = pendingThemeRequestsRef.current.get(normalizedTheme);
 
@@ -2024,6 +2009,13 @@ export default function AnalyzePage() {
             {/* Left Column - Video (2/3 width) */}
             <div className="lg:col-span-2">
               <div className="sticky top-[6.5rem] space-y-3.5" id="video-container">
+                <VideoHeader
+                  videoInfo={videoInfo!}
+                  videoId={videoId!}
+                  onFavoriteToggle={(newStatus) => {
+                    console.log("收藏状态变啦:", newStatus);
+                  }}
+                />
                 <YouTubePlayer
                   videoId={videoId}
                   selectedTopic={selectedTopic}
@@ -2033,11 +2025,7 @@ export default function AnalyzePage() {
                   onTopicSelect={handleTopicSelect}
                   onTimeUpdate={handleTimeUpdate}
                   transcript={transcript}
-                  isPlayingAll={isPlayingAll}
-                  playAllIndex={playAllIndex}
                   onTogglePlayAll={handleTogglePlayAll}
-                  setPlayAllIndex={memoizedSetPlayAllIndex}
-                  setIsPlayingAll={memoizedSetIsPlayingAll}
                   renderControls={false}
                   onDurationChange={setVideoDuration}
                   selectedLanguage={selectedLanguage}
@@ -2063,8 +2051,6 @@ export default function AnalyzePage() {
                   onPlayTopic={requestPlayTopic}
                   onSeek={requestSeek}
                   onPlayAll={handleTogglePlayAll}
-                  isPlayingAll={isPlayingAll}
-                  playAllIndex={playAllIndex}
                   currentTime={currentTime}
                   videoDuration={videoDuration}
                   transcript={transcript}
