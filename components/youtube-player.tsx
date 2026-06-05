@@ -1,5 +1,6 @@
 "use client";
 
+import usePlayAllStore from "@/lib/stores/play-all-store";
 import { useEffect, useRef, useState } from "react";
 import { Topic, TranscriptSegment, PlaybackCommand, TranslationRequestHandler } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
@@ -17,11 +18,7 @@ interface YouTubePlayerProps {
   onTopicSelect?: (topic: Topic, fromPlayAll?: boolean) => void;
   onPlayTopic?: (topic: Topic) => void;
   transcript?: TranscriptSegment[];
-  isPlayingAll?: boolean;
-  playAllIndex?: number;
   onTogglePlayAll?: () => void;
-  setPlayAllIndex?: (index: number | ((prev: number) => number)) => void;
-  setIsPlayingAll?: (playing: boolean) => void;
   renderControls?: boolean;
   onDurationChange?: (duration: number) => void;
   selectedLanguage?: string | null;
@@ -38,10 +35,6 @@ export function YouTubePlayer({
   topics = [],
   onTopicSelect,
   transcript = [],
-  isPlayingAll = false,
-  playAllIndex = 0,
-  setPlayAllIndex,
-  setIsPlayingAll,
   renderControls = true,
   onDurationChange,
   selectedLanguage = null,
@@ -58,6 +51,7 @@ export function YouTubePlayer({
   const isPlayingAllRef = useRef(false);
   const playAllIndexRef = useRef(0);
   const topicsRef = useRef<Topic[]>([]);
+  const {isPlayingAll,playAllIndex,setIsPlayingAll,setPlayAllIndex} = usePlayAllStore();
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -138,14 +132,14 @@ export function YouTubePlayer({
                         const isLastTopic = currentIndex >= topicsRef.current.length - 1;
                         if (isLastTopic) {
                           // End Play All mode
-                          setIsPlayingAll?.(false);
+                          setIsPlayingAll;
                           isPlayingAllRef.current = false;
                           playerRef.current.pauseVideo();
                         } else {
                           // Advance to the next topic
                           const nextIndex = currentIndex + 1;
                           playAllIndexRef.current = nextIndex;
-                          setPlayAllIndex?.(nextIndex);
+                          setPlayAllIndex;
                         }
                       }
                     }
@@ -389,7 +383,7 @@ export function YouTubePlayer({
 
     // If clicking a topic manually, exit play all mode
     if (isPlayingAll) {
-      setIsPlayingAll?.(false);
+      setIsPlayingAll;
     }
 
     // Seek to the start of the single segment and play

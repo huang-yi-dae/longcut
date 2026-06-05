@@ -1,11 +1,12 @@
 import type { ProviderBehavior, ProviderKey } from './types';
 
-const PROVIDER_ORDER: ProviderKey[] = ['grok', 'gemini', 'minimax'];
+const PROVIDER_ORDER: ProviderKey[] = ['grok', 'gemini', 'minimax', 'deepseek'];
 
 const PROVIDER_DEFAULT_MODELS: Record<ProviderKey, string> = {
   grok: 'grok-4-1-fast-non-reasoning',
   gemini: 'gemini-2.5-flash-lite',
   minimax: 'MiniMax-M2.7',
+  deepseek: 'deepseek-chat',
 };
 
 const PROVIDER_BEHAVIORS: Record<ProviderKey, ProviderBehavior> = {
@@ -21,18 +22,23 @@ const PROVIDER_BEHAVIORS: Record<ProviderKey, ProviderBehavior> = {
     forceFullTranscriptTopicGeneration: false,
     forceSmartModeOnClient: true,
   },
+  deepseek: {
+    forceFullTranscriptTopicGeneration: false,
+    forceSmartModeOnClient: false,
+  },
 };
 
 const PROVIDER_ENV_KEYS: Record<ProviderKey, string> = {
   grok: 'XAI_API_KEY',
   gemini: 'GEMINI_API_KEY',
   minimax: 'MINIMAX_API_KEY',
+  deepseek: 'DEEPSEEK_API_KEY',
 };
 
 export function normalizeProviderKey(value?: string | null): ProviderKey | undefined {
   const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
 
-  if (normalized === 'grok' || normalized === 'gemini' || normalized === 'minimax') {
+  if (normalized === 'grok' || normalized === 'gemini' || normalized === 'minimax' || normalized === 'deepseek') {
     return normalized;
   }
 

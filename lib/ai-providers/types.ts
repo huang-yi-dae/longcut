@@ -1,6 +1,6 @@
 import type { ZodTypeAny } from 'zod';
 
-export type ProviderKey = 'grok' | 'gemini' | 'minimax';
+export type ProviderKey = 'grok' | 'gemini' | 'minimax' | 'deepseek';
 
 export interface ProviderBehavior {
   forceFullTranscriptTopicGeneration: boolean;

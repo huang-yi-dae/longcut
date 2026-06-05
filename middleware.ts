@@ -1,4 +1,4 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
 function parseHost(url: string | undefined) {
@@ -10,9 +10,18 @@ function parseHost(url: string | undefined) {
   }
 }
 
+const hasSupabaseConfig = () =>
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
 export async function middleware(request: NextRequest) {
-  // First, handle Supabase session update
-  const response = await updateSession(request);
+  // When Supabase is not configured, skip session management entirely
+  let response: NextResponse;
+  if (hasSupabaseConfig()) {
+    response = await updateSession(request);
+  } else {
+    response = NextResponse.next({ request });
+  }
 
   // Add Content-Security-Policy and other security headers
   const supabaseHost = parseHost(process.env.NEXT_PUBLIC_SUPABASE_URL);

@@ -13,14 +13,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const hasSupabaseConfig = () =>
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
+  const [loading, setLoading] = useState(false)
+  const supabase = useMemo(() => hasSupabaseConfig() ? createClient() : null, [])
   const lastVisibleRef = useRef<number>(Date.now())
 
   // Memoize visibility handler to avoid recreating on every render
   const handleVisibilityChange = useCallback(async () => {
+    if (!supabase) return
     if (document.visibilityState === 'visible') {
       const timeSinceHidden = Date.now() - lastVisibleRef.current;
 
@@ -48,9 +53,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Track when tab was hidden
       lastVisibleRef.current = Date.now();
     }
-  }, [supabase.auth]);
+  }, [supabase?.auth]);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -75,19 +85,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
     }
-  }, [supabase.auth, handleVisibilityChange])
+  }, [supabase?.auth, handleVisibilityChange])
 
   const signOut = async () => {
     try {
-      // Call server-side signout to clear HTTP-only cookies
-      await fetch('/api/auth/signout', { method: 'POST' })
-      
-      // Also sign out on client to clear any local state
-      await supabase.auth.signOut()
+      if (supabase) {
+        // Call server-side signout to clear HTTP-only cookies
+        await fetch('/api/auth/signout', { method: 'POST' })
+        // Also sign out on client to clear any local state
+        await supabase.auth.signOut()
+      }
     } catch (error) {
       console.error('Sign out error:', error)
     }
-    
+
     setUser(null)
     window.location.href = '/'
   }

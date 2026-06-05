@@ -1,5 +1,6 @@
 "use client";
 
+import  usePlayAllStore  from "@/lib/stores/play-all-store";
 import { useState, useEffect } from "react";
 import { Topic, TranscriptSegment, TranslationRequestHandler } from "@/lib/types";
 import { Card } from "@/components/ui/card";
@@ -22,8 +23,6 @@ interface HighlightsPanelProps {
   onPlayTopic?: (topic: Topic) => void;
   onSeek: (time: number) => void;
   onPlayAll: () => void;
-  isPlayingAll: boolean;
-  playAllIndex?: number;
   currentTime: number;
   videoDuration: number;
   transcript?: TranscriptSegment[];
@@ -40,7 +39,6 @@ export function HighlightsPanel({
   onPlayTopic,
   onSeek,
   onPlayAll,
-  isPlayingAll,
   currentTime,
   videoDuration,
   transcript = [],
@@ -49,6 +47,7 @@ export function HighlightsPanel({
   selectedLanguage = null,
   onRequestTranslation,
 }: HighlightsPanelProps) {
+  const isPlayingAll = usePlayAllStore((state) => state.isPlayingAll);
   // Translation state
   const [translatedLabels, setTranslatedLabels] = useState(DEFAULT_LABELS);
 

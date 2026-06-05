@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAppUrl } from '@/lib/utils'
 import { useInAppBrowser } from '@/lib/hooks/use-in-app-browser'
@@ -13,6 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AlertCircle, Loader2, CheckCircle, Youtube } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { toast } from 'sonner'
+
+const hasSupabaseConfig = () =>
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 interface AuthModalProps {
   open: boolean
@@ -28,7 +32,7 @@ export function AuthModal({ open, onOpenChange, onSuccess, trigger = 'manual', c
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const supabase = createClient()
+  const supabase = useMemo(() => hasSupabaseConfig() ? createClient() : null, [])
   const appUrl = resolveAppUrl(typeof window !== 'undefined' ? window.location.origin : undefined)
   const isInApp = useInAppBrowser()
 

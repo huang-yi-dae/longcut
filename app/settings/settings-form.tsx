@@ -171,7 +171,9 @@ function formatStatus(subscription: SubscriptionSummary | null): string {
 export default function SettingsForm({ user, profile, videoCount, subscription }: SettingsFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClient()
+  const hasSupabaseConfig = !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabase = useMemo(() => hasSupabaseConfig ? createClient() : null, [])
 
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [newPassword, setNewPassword] = useState('')
