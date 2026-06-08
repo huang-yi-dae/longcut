@@ -82,7 +82,6 @@ export function VideoHeader({
             className="flex-shrink-0"
           >
           <Star className={`h-3.5 w-3.5 ${favoriteStatus ? 'fill-current' : ''}`} />
-
             <span className="ml-1.5">
               {favoriteStatus ? 'Favorited' : 'Favorite'}
             </span>
