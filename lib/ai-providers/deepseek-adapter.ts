@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { ProviderAdapter, ProviderGenerateParams, ProviderGenerateResult } from './types';
 
 const PROVIDER_NAME = 'deepseek';
-const DEFAULT_MODEL = 'deepseek-chat';
+const DEFAULT_MODEL = 'deepseek-v4-flash';
 const DEFAULT_BASE_URL = 'https://api.deepseek.com/v1';
 
 function buildAbortController(timeoutMs?: number) {
