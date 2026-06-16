@@ -23,7 +23,8 @@ export default async function MyVideosPage() {
     .order('accessed_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching user videos:', error);
+    console.error('Error fetching user videos:', JSON.stringify(error, null, 2));
+    console.error('Error details:', { message: error.message, code: error.code, details: error.details, hint: error.hint });
   }
 
   return (

@@ -4,9 +4,9 @@
 
 - ✅ 有 Java 基础（变量、函数、类、面向对象）
 - ✅ 接触过 Python Flask 框架（理解 HTTP 请求-响应模型）
-- ❌ 不熟悉 JavaScript / TypeScript
-- ❌ 不熟悉前端框架（React / Next.js）
-- ❌ 不熟悉现代 Web 开发工具链
+- ✅ JavaScript / TypeScript 基础（变量、函数、类型系统、泛型、interface/type）
+- ✅ React/Next.js 基础（组件、Hooks、状态管理、数据流）
+- ✅ 现代 Web 开发工具链（Tailwind CSS、Supabase、Zustand、TypeScript）
 
 ## 第一性原理梳理
 
@@ -28,15 +28,15 @@
 ```
 你已知的：Java 变量/函数/类 + Flask HTTP 请求/响应
          ↓
-阶段 0：JavaScript = Java 的表兄弟（语法像但性格不同）
+阶段 0：JavaScript = Java 的表兄弟 ✅
          ↓
-阶段 1：浏览器不是黑盒子（HTML + DOM + 事件）
+阶段 1：浏览器不是黑盒子（HTML + DOM + 事件）✅（部分覆盖）
          ↓
-阶段 2：为什么需要 React？（组件化思想的起源）
+阶段 2：为什么需要 React？（组件化思想的起源）✅
          ↓
-阶段 3：Next.js = React + 路由 + 服务器能力
+阶段 3：Next.js = React + 路由 + 服务器能力 ✅
          ↓
-阶段 4：深入 LongCut 项目（边学边剖析）
+阶段 4：深入 LongCut 项目（边学边剖析）→ 进行中
 ```
 
 ---
@@ -52,7 +52,7 @@
 | 0.2 | 函数是一等公民 | 函数可以赋值给变量？ |
 | 0.3 | 对象 ≠ 类 | JS的"对象"和Java的"对象"是一回事吗？ |
 | 0.4 | 异步是天生的 | Java用多线程，JS用单线程+事件循环，为什么？ |
-| 0.5 | TypeScript = JS + 类型标注 | 为什么大型项目要用TS？ |
+| 0.5 | TypeScript = JS + 类型标注 | 为什么大型项目要用TS？ | ✅ |
 
 ### 阶段 1 — 浏览器即运行时
 **目标**：理解浏览器环境，类比Flask的请求-响应
@@ -61,8 +61,8 @@
 |------|------|----------|
 | 1.1 | HTML/CSS/JS 三角关系 | 为什么不是像Java一样一个文件搞定？ |
 | 1.2 | DOM：浏览器里的数据结构 | 对比：Flask模板渲染 vs JS动态操作页面 |
-| 1.3 | 事件驱动模型 | 点击按钮到底发生了什么？ |
-| 1.4 | 前后端分离的为什么 | Flask返回HTML vs 现代SPA返回JSON |
+| 1.3 | 事件驱动模型 | 点击按钮到底发生了什么？ | ✅ |
+| 1.4 | 前后端分离的为什么 | Flask返回HTML vs 现代SPA返回JSON | ✅ |
 
 ### 阶段 2 — React 是什么、为什么
 **目标**：理解组件化，不是为了学框架而学框架
@@ -70,31 +70,31 @@
 | 序号 | 课题 | 关键问题 |
 |------|------|----------|
 | 2.1 | 没有框架的原生JS多痛苦 | 管理几十个DOM节点的噩梦 |
-| 2.2 | React 的核心思想：UI = f(state) | 你告诉React"想要什么"，不用告诉"怎么做" |
-| 2.3 | 组件：就是带逻辑的HTML片段 | 类比：Java Class = 数据+方法，React Component = UI+逻辑 |
-| 2.4 | useState / useEffect | 什么时候代码会重新执行？ |
-| 2.5 | JSX：看起来像HTML但不是HTML | 为什么React不直接写HTML？ |
+| 2.2 | React 的核心思想：UI = f(state) | 你告诉React"想要什么"，不用告诉"怎么做" | ✅ |
+| 2.3 | 组件：就是带逻辑的HTML片段 | 类比：Java Class = 数据+方法，React Component = UI+逻辑 | ✅ |
+| 2.4 | useState / useEffect | 什么时候代码会重新执行？ | ✅ |
+| 2.5 | JSX：看起来像HTML但不是HTML | 为什么React不直接写HTML？ | ✅ |
 
 ### 阶段 3 — Next.js = React 的壳
 **目标**：从Flask视角理解Next.js App Router
 
 | 序号 | 课题 | 关键问题 |
 |------|------|----------|
-| 3.1 | Flask的路由 vs Next.js的文件路由 | `@app.route("/hello")` vs `app/hello/page.tsx` |
-| 3.2 | 服务器组件 vs 客户端组件 | 哪些代码在服务器跑？哪些在浏览器跑？ |
-| 3.3 | API Route = Flask 的 route 返回 JSON | LongCut 的 `/api/transcript` 和 Flask 的 route 本质一样 |
-| 3.4 | 项目结构全景 | page.tsx, layout.tsx, route.ts 分别干什么？ |
+| 3.1 | Flask的路由 vs Next.js的文件路由 | `@app.route("/hello")` vs `app/hello/page.tsx` | ✅ |
+| 3.2 | 服务器组件 vs 客户端组件 | 哪些代码在服务器跑？哪些在浏览器跑？ | ✅ |
+| 3.3 | API Route = Flask 的 route 返回 JSON | LongCut 的 `/api/transcript` 和 Flask 的 route 本质一样 | ✅ |
+| 3.4 | 项目结构全景 | page.tsx, layout.tsx, route.ts 分别干什么？ | ✅ |
 
 ### 阶段 4 — LongCut 项目逐层解剖
 **目标**：用学会的知识理解这个真实项目
 
 | 序号 | 课题 | 关键问题 |
 |------|------|----------|
-| 4.1 | 用户旅程追踪：从输入URL到看到视频分析 | 代码是怎么一步步串起来的？ |
-| 4.2 | AI生成管线 | 多个API怎么并行调用？ |
-| 4.3 | 数据库层（Supabase） | 和 Flask 的 SQLAlchemy 有什么区别？ |
-| 4.4 | 安全机制 | CSRF、Rate Limiting 在代码里长什么样？ |
-| 4.5 | 工程实践 | 错误处理、超时管理、内存泄漏防护 |
+| 4.1 | 用户旅程追踪：从输入URL到看到视频分析 | 代码是怎么一步步串起来的？ | ✅ |
+| 4.2 | AI生成管线（Adapter模式、Provider切换、fallback降级） | 多个API怎么并行调用？ | ✅ |
+| 4.3 | 数据库层（Supabase CRUD、JOIN、Zod 验证、Migrations） | 链式调用对应什么SQL？ | ✅ |
+| 4.4 | 安全机制（权限检查、Security 中间件、rateLimit、CSRF） | 后端怎么防越权？ | ✅ |
+| 4.5 | 工程实践（错误处理、高阶函数、三态模式、格式桥接） | 超时管理、内存泄漏防护 | ✅ |
 
 ---
 
@@ -107,4 +107,4 @@
 
 ---
 
-_最后更新：2026-05-21_
+_最后更新：2026-06-15（全阶段计划更新）_
