@@ -141,11 +141,11 @@
 | 1 | 进程管理（Cluster + child_process + process.env） | 第 4 天 | ✅ |
 | 1 | Express + 对比 + API 安全 | 第 5 天 | ✅ |
 | 1 | 原生 HTTP 服务器 | 第 6 天 | ⬜ |
-| 2 | MongoDB 概念 + CRUD | 第 8-9 天 | ⬜ |
+| 2 | MongoDB 概念 + CRUD | 第 8-9 天 | ✅ |
 | 2 | Mongoose | 第 10 天 | ⬜ |
 | 2 | MongoDB 面试题 | 第 11 天 | ⬜ |
-| 2 | Redis 基础 | 第 12 天 | ⬜ |
-| 2 | Redis 缓存模式 | 第 13 天 | ⬜ |
+| 2 | Redis 基础 | 第 12 天 | ✅ |
+| 2 | Redis 缓存模式 | 第 13 天 | ✅ |
 | 2 | Redis 面试题 | 第 14 天 | ⬜ |
 | 2 | 数据库对比复习 | 第 15 天 | ⬜ |
 | 3 | 功能设计 | 第 16 天 | ⬜ |
