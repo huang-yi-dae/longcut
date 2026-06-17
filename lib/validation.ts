@@ -172,7 +172,8 @@ export const chatRequestSchema = z.object({
 
 export const toggleFavoriteRequestSchema = z.object({
   videoId: youtubeIdSchema,
-  isFavorite: z.boolean()
+  isFavorite: z.boolean(),
+  folderId: z.string().uuid().nullable().optional()
 });
 
 export const noteSourceSchema = z.enum(['chat', 'takeaways', 'transcript', 'custom']);

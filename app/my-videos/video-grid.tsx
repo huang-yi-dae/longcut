@@ -1,14 +1,15 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { buildVideoSlug, formatDuration } from '@/lib/utils';
-import { Calendar, Play, Star, Search, Loader2 } from 'lucide-react';
+import { Calendar, Play, Star, Search, Loader2, Folder, FolderOpen, Plus, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth-context';
+import { getFolders, createFolder, type FavoriteFolder } from '@/app/actions/folders';
 
 interface VideoAnalysis {
   id: string;
@@ -28,12 +29,14 @@ interface UserVideo {
   video_id: string;
   accessed_at: string;
   is_favorite: boolean;
+  folder_id: string | null;
   notes: string | null;
   video: VideoAnalysis;
 }
 
 interface VideoGridProps {
   videos: UserVideo[];
+  folders: FavoriteFolder[];
 }
 
 const buildCanonicalSlug = (video: VideoAnalysis): string | null => {
@@ -51,20 +54,55 @@ const buildCanonicalSlug = (video: VideoAnalysis): string | null => {
   return buildVideoSlug(video.title, video.youtube_id);
 };
 
-export function VideoGrid({ videos }: VideoGridProps) {
+export function VideoGrid({ videos, folders: initialFolders }: VideoGridProps) {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFavorites, setShowFavorites] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [favoriteStatuses, setFavoriteStatuses] = useState<Record<string, boolean>>(
     videos.reduce((acc, video) => ({ ...acc, [video.id]: video.is_favorite }), {})
   );
   const [updatingFavorites, setUpdatingFavorites] = useState<Set<string>>(new Set());
+  const [folders, setFolders] = useState<FavoriteFolder[]>(initialFolders);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const newFolderRef = useRef<HTMLDivElement>(null);
+
+  // Refresh folders when component mounts (client-side)
+  useEffect(() => {
+    if (user && initialFolders.length === 0) {
+      getFolders().then(setFolders);
+    }
+  }, [user, initialFolders.length]);
+
+  // Close new folder input on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (newFolderRef.current && !newFolderRef.current.contains(e.target as Node)) {
+        setShowNewFolder(false);
+        setNewFolderName('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const filteredVideos = videos.filter(userVideo => {
     const matchesSearch = userVideo.video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           userVideo.video.author?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFavorite = !showFavorites || favoriteStatuses[userVideo.id];
-    return matchesSearch && matchesFavorite;
+    
+    // Filter by folder
+    let matchesFolder = true;
+    if (selectedFolderId === null) {
+      matchesFolder = true; // Show all
+    } else if (selectedFolderId === '__favorites__') {
+      matchesFolder = favoriteStatuses[userVideo.id];
+    } else if (selectedFolderId === '__unfiled__') {
+      matchesFolder = !userVideo.folder_id;
+    } else {
+      matchesFolder = userVideo.folder_id === selectedFolderId;
+    }
+    
+    return matchesSearch && matchesFolder;
   });
 
   const formatDate = (dateString: string) => {
@@ -133,35 +171,130 @@ export function VideoGrid({ videos }: VideoGridProps) {
     }
   };
 
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    try {
+      const { folder } = await createFolder(newFolderName.trim());
+      setFolders(prev => [...prev, folder]);
+      setNewFolderName('');
+      setShowNewFolder(false);
+      setSelectedFolderId(folder.id);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create folder';
+      toast.error(msg);
+    }
+  };
+
+  // Count videos per folder
+  const folderCounts = folders.reduce((acc, f) => {
+    acc[f.id] = videos.filter(v => v.folder_id === f.id).length;
+    return acc;
+  }, {} as Record<string, number>);
+  const unfiledCount = videos.filter(v => !v.folder_id).length;
+  const favoritesCount = videos.filter(v => favoriteStatuses[v.id]).length;
+
   return (
     <>
-      <div className="flex gap-3.5 mb-5">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3.5 w-3.5" />
-          <Input
-            type="text"
-            placeholder="Search your videos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 text-xs"
-          />
-        </div>
+      {/* Folder tabs */}
+      <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1">
         <Button
-          variant={showFavorites ? "default" : "outline"}
-          onClick={() => setShowFavorites(!showFavorites)}
-          className="text-xs"
+          variant={selectedFolderId === null ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedFolderId(null)}
+          className="text-xs whitespace-nowrap"
         >
-          <Star className={`h-3.5 w-3.5 ${showFavorites ? 'fill-current' : ''}`} />
-          <span className="ml-1.5">Favorites</span>
+          <FolderOpen className="h-3 w-3 mr-1" />
+          All ({videos.length})
         </Button>
+        <Button
+          variant={selectedFolderId === '__favorites__' ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedFolderId('__favorites__')}
+          className="text-xs whitespace-nowrap"
+        >
+          <Star className={`h-3 w-3 mr-1 ${selectedFolderId === '__favorites__' ? 'fill-current' : ''}`} />
+          Favorites ({favoritesCount})
+        </Button>
+        {folders.map(folder => (
+          <Button
+            key={folder.id}
+            variant={selectedFolderId === folder.id ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedFolderId(folder.id)}
+            className="text-xs whitespace-nowrap"
+          >
+            <Folder className="h-3 w-3 mr-1" />
+            {folder.name} ({folderCounts[folder.id] || 0})
+          </Button>
+        ))}
+        {unfiledCount > 0 && (
+          <Button
+            variant={selectedFolderId === '__unfiled__' ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedFolderId('__unfiled__')}
+            className="text-xs whitespace-nowrap"
+          >
+            Unfiled ({unfiledCount})
+          </Button>
+        )}
+        
+        {/* New folder button / input */}
+        <div ref={newFolderRef} className="flex-shrink-0">
+          {showNewFolder ? (
+            <div className="flex items-center gap-1">
+              <Input
+                autoFocus
+                className="h-7 w-28 text-xs"
+                placeholder="Folder name"
+                value={newFolderName}
+                onChange={e => setNewFolderName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleCreateFolder();
+                  if (e.key === 'Escape') {
+                    setShowNewFolder(false);
+                    setNewFolderName('');
+                  }
+                }}
+              />
+              <Button size="sm" className="h-7 text-xs px-2" onClick={handleCreateFolder}>
+                <Check className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowNewFolder(true)}
+              className="text-xs text-muted-foreground whitespace-nowrap"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              New
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Search bar */}
+      <div className="relative mb-5">
+        <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3.5 w-3.5" />
+        <Input
+          type="text"
+          placeholder="Search your videos..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 text-xs"
+        />
+      </div>
+
+      {/* Video grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredVideos.map((userVideo) => {
           const slug = buildCanonicalSlug(userVideo.video);
           const href = slug
             ? `/v/${slug}`
             : `/analyze/${userVideo.video.youtube_id}?cached=true`;
+
+          const folder = folders.find(f => f.id === userVideo.folder_id);
 
           return (
             <Link
@@ -209,6 +342,13 @@ export function VideoGrid({ videos }: VideoGridProps) {
                     )}
                   </Button>
                 )}
+                {/* Folder badge */}
+                {folder && (
+                  <div className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <Folder className="h-2.5 w-2.5" />
+                    {folder.name}
+                  </div>
+                )}
               </div>
 
               <div className="p-3.5">
@@ -246,9 +386,11 @@ export function VideoGrid({ videos }: VideoGridProps) {
           <p className="text-xs text-muted-foreground">
             {searchQuery
               ? `No videos found matching "${searchQuery}"`
-              : showFavorites
+              : selectedFolderId === '__favorites__'
                 ? "You haven't marked any videos as favorites yet"
-                : "No videos found"}
+                : selectedFolderId
+                  ? "This folder is empty"
+                  : "No videos found"}
           </p>
         </div>
       )}

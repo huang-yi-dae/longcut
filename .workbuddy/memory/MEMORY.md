@@ -10,7 +10,7 @@
 - 2026-06-12：创建 longcut-neat 技能（Skill Creator 实践 + neat-freak 本地化适配）
 - 2026-06-12（下午）：React Hooks 进阶 — useEffect / useRef / useCallback / useMemo / 自定义 Hook
 - 2026-06-15：Zustand 复习 + Supabase CRUD（insert/select/eq/order/limit/single/delete/upsert）+ 权限检查 + Zod 运行时验证（parse/safeParse/refine/transform）+ 联表查询 JOIN + 格式桥接 + Security 中间件（rateLimit/maxBodySize）+ AI fallback 降级 + 数据库迁移 Migration
-- 2026-06-16：Node.js 运行时深入 — 事件循环（同步→微任务→宏任务）/ async/await暂停机制 / 模块系统（export default不加{} vs 具名加{}）/ Stream流（管道传输不爆内存）/ .pipe()连接流 / Express（=Node.js版Flask）/ API安全五关（认证→限流→校验→鉴权→输出过滤）/ Cluster多进程并行 / child_process调外部命令 / process.env环境变量 / MongoDB文档存储（JSON对象可嵌套）vs PostgreSQL表格 / MongoDB CRUD（条件对象vs链式调用，$set只改指定字段）/ 缓存三大问题（穿透=缓存空值，击穿=互斥锁，雪崩=过期时间加随机值）
+- 2026-06-17：MongoDB面试题（Collection=表/Document=行/嵌入vs引用16MB限制）+ Redis面试题（vs Memcache KV/过期删除惰性+定期+淘汰/5种数据类型String Hash List Set SortedSet）+ 数据库对比复习（PostgreSQL结构化 vs MongoDB文档 vs Redis缓存，三者互补）+ 阶段3实战：收藏夹分组功能（favorite_folders表+REST API+Server Actions+video-header文件夹选择器+my-videos文件夹标签页）
 
 ## 实战记录
 - 乐观更新：video-header.tsx 收藏按钮

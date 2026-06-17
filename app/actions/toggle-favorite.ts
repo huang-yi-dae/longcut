@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 
-export async function toggleFavorite(videoId: string, isFavorite: boolean) {
+export async function toggleFavorite(videoId: string, isFavorite: boolean, folderId?: string | null) {
   try {
     const supabase = await createClient()
 
@@ -24,15 +24,36 @@ export async function toggleFavorite(videoId: string, isFavorite: boolean) {
       throw new Error('Video not found')
     }
 
-    // Use upsert to atomically update or insert the favorite status
+    // Build upsert payload
+    const upsertPayload: Record<string, unknown> = {
+      user_id: user.id,
+      video_id: video.id,
+      is_favorite: isFavorite,
+      accessed_at: new Date().toISOString()
+    }
+
+    // When favoriting: set folder_id (default folder if not specified)
+    if (isFavorite) {
+      if (folderId) {
+        upsertPayload.folder_id = folderId
+      } else {
+        const { data: defaultFolder } = await supabase
+          .from('favorite_folders')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('name', '默认收藏夹')
+          .single()
+        if (defaultFolder) {
+          upsertPayload.folder_id = defaultFolder.id
+        }
+      }
+    } else {
+      upsertPayload.folder_id = null
+    }
+
     const { data, error } = await supabase
       .from('user_videos')
-      .upsert({
-        user_id: user.id,
-        video_id: video.id,
-        is_favorite: isFavorite,
-        accessed_at: new Date().toISOString()
-      }, {
+      .upsert(upsertPayload, {
         onConflict: 'user_id,video_id'
       })
       .select()
@@ -42,7 +63,7 @@ export async function toggleFavorite(videoId: string, isFavorite: boolean) {
       throw error
     }
 
-    return { success: true, isFavorite: data.is_favorite }
+    return { success: true, isFavorite: data.is_favorite, folderId: data.folder_id }
   } catch (error) {
     console.error('Error toggling favorite:', error)
     throw error

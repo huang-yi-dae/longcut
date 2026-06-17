@@ -27,6 +27,13 @@ export default async function MyVideosPage() {
     console.error('Error details:', { message: error.message, code: error.code, details: error.details, hint: error.hint });
   }
 
+  // Fetch user's favorite folders
+  const { data: folders } = await supabase
+    .from('favorite_folders')
+    .select('id, name, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true });
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-8">
@@ -37,7 +44,7 @@ export default async function MyVideosPage() {
       </div>
 
       {userVideos && userVideos.length > 0 ? (
-        <VideoGrid videos={userVideos} />
+        <VideoGrid videos={userVideos} folders={folders || []} />
       ) : (
         <div className="text-center py-12">
           <p className="text-lg text-muted-foreground mb-4">
