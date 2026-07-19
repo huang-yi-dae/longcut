@@ -26,7 +26,7 @@ Everything else — the AI highlight engine, transcript pipeline, note-taking wo
 - **Node.js 22+** (the app uses `node:sqlite`, available since 22.x)
 - **pnpm** (the project uses pnpm as package manager)
 - A **DeepSeek** API key (or configure another provider via `AI_PROVIDER`)
-- A proxy or VPN to access YouTube (set `GLOBAL_AGENT_HTTP_PROXY` in `.env.local`)
+- A proxy or VPN to access YouTube (optional — only needed if blocked in your region; set `GLOBAL_AGENT_HTTP_PROXY` in `.env.local`)
 
 ### Setup
 
@@ -51,8 +51,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:8080
 # CSRF protection (generate with: openssl rand -base64 32)
 CSRF_SALT=longcut_dev_salt_2026_random_string
 
-# YouTube proxy (Node.js fetch doesn't use system proxy)
-GLOBAL_AGENT_HTTP_PROXY=http://127.0.0.1:10090
+# YouTube proxy — optional. Set if you need a proxy to access YouTube
+# (e.g. users in mainland China). Leave empty or comment out to skip.
+# GLOBAL_AGENT_HTTP_PROXY=http://127.0.0.1:10090
 ```
 
 ### Run

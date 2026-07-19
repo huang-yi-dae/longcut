@@ -12,9 +12,9 @@ const PROXY_URL =
   process.env.GLOBAL_AGENT_HTTP_PROXY ||
   process.env.HTTPS_PROXY ||
   process.env.HTTP_PROXY ||
-  'http://127.0.0.1:10090';
+  ''; // empty = no proxy — fall through to direct connection
 
-const proxyAgent = new HttpsProxyAgent(PROXY_URL);
+const proxyAgent = PROXY_URL ? new HttpsProxyAgent(PROXY_URL) : null;
 
 function isLocalhost(hostname: string): boolean {
   return (
@@ -36,8 +36,8 @@ export async function proxyFetch(
   const urlStr = typeof url === 'string' ? url : url.href;
   const parsed = typeof url === 'string' ? new URL(url) : url;
 
-  // Bypass proxy for localhost
-  if (isLocalhost(parsed.hostname)) {
+  // Bypass proxy for localhost or when no proxy is configured
+  if (isLocalhost(parsed.hostname) || !proxyAgent) {
     return globalThis.fetch(url, init);
   }
 

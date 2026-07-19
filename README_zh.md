@@ -26,7 +26,7 @@
 - **Node.js 22+**（使用了 `node:sqlite`，最低 22.x）
 - **pnpm**（本项目使用 pnpm 作为包管理器）
 - **DeepSeek** API key（或通过 `AI_PROVIDER` 配置其他提供商）
-- 用于访问 YouTube 的代理 / VPN（在 `.env.local` 中设置 `GLOBAL_AGENT_HTTP_PROXY`）
+- 用于访问 YouTube 的代理 / VPN（可选，仅在 YouTube 被屏蔽的地区需要；在 `.env.local` 中设置 `GLOBAL_AGENT_HTTP_PROXY`）
 
 ### 安装
 
@@ -51,8 +51,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:8080
 # CSRF 保护（使用 openssl rand -base64 32 生成）
 CSRF_SALT=longcut_dev_salt_2026_random_string
 
-# YouTube 代理（Node.js 的 fetch 不走系统代理）
-GLOBAL_AGENT_HTTP_PROXY=http://127.0.0.1:10090
+# YouTube 代理 — 可选。如果 YouTube 在你所在地区被屏蔽（如中国大陆），
+# 请设置代理地址。不需要代理则留空或注释掉。
+# GLOBAL_AGENT_HTTP_PROXY=http://127.0.0.1:10090
 ```
 
 ### 运行

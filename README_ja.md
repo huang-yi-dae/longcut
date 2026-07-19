@@ -26,7 +26,7 @@ LongCut を完全に自己ホスト型のローカルデプロイ版に改造し
 - **Node.js 22+**（`node:sqlite` を使用、22.x 以降が必要）
 - **pnpm**（本プロジェクトは pnpm をパッケージマネージャとして使用）
 - **DeepSeek** API キー（または `AI_PROVIDER` で他のプロバイダを設定）
-- YouTube にアクセスするためのプロキシ / VPN（`.env.local` に `GLOBAL_AGENT_HTTP_PROXY` を設定）
+- YouTube にアクセスするためのプロキシ / VPN（オプション — YouTube がブロックされている地域のみ必要；`.env.local` に `GLOBAL_AGENT_HTTP_PROXY` を設定）
 
 ### セットアップ
 
@@ -51,8 +51,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:8080
 # CSRF 保護（openssl rand -base64 32 で生成）
 CSRF_SALT=longcut_dev_salt_2026_random_string
 
-# YouTube プロキシ（Node.js の fetch はシステムプロキシを使用しない）
-GLOBAL_AGENT_HTTP_PROXY=http://127.0.0.1:10090
+# YouTube プロキシ — オプション。YouTube がブロックされている地域
+#（中国本土など）ではプロキシアドレスを設定してください。不要なら空欄かコメントアウト。
+# GLOBAL_AGENT_HTTP_PROXY=http://127.0.0.1:10090
 ```
 
 ### 実行
