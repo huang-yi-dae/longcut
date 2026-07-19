@@ -37,15 +37,21 @@ async function handler(req: NextRequest) {
       );
     }
 
-    // Use secure update function with ownership verification
-    const { data: result, error: updateError } = await supabase
-      .rpc('update_video_analysis_secure', {
-        p_youtube_id: videoId,
-        p_user_id: user.id,
-        p_summary: summary ?? null,
-        p_suggested_questions: suggestedQuestions ?? null
+    // Local deployment: update the cached analysis directly (no remote RPC).
+    const { data: updated, error: updateError } = await supabase
+      .from('video_analyses')
+      .update({
+        summary: summary ?? null,
+        suggested_questions: suggestedQuestions ?? null,
+        updated_at: new Date().toISOString(),
       })
-      .single<UpdateResult>();
+      .eq('youtube_id', videoId)
+      .select('id')
+      .maybeSingle();
+
+    const result: UpdateResult | null = updated
+      ? { success: true, video_id: (updated as { id: string }).id }
+      : null;
 
     if (updateError) {
       console.error('Error updating video analysis:', updateError);

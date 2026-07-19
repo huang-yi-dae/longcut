@@ -48,19 +48,11 @@ function validateRequiredEnvVars(): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Required environment variables
+  // Required environment variables.
+  // Local deployment uses SQLite (no Supabase) and has Stripe disabled,
+  // so only the AI provider key is genuinely required.
   const required = {
-    // Supabase
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-
-    // Stripe (validated separately)
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-    STRIPE_PRO_PRICE_ID: process.env.STRIPE_PRO_PRICE_ID,
-    STRIPE_TOPUP_PRICE_ID: process.env.STRIPE_TOPUP_PRICE_ID,
+    DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
   };
 
   // Check each required variable

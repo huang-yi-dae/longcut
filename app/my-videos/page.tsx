@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { VideoGrid } from './video-grid';
 
+// Render per-request (local single-user app; avoids build-time DB queries).
+export const dynamic = 'force-dynamic';
+
 export default async function MyVideosPage() {
   const supabase = await createClient();
 
@@ -12,13 +15,12 @@ export default async function MyVideosPage() {
     redirect('/');
   }
 
-  // Fetch user's video history with video details
-  const { data: userVideos, error } = await supabase
+  // Fetch user's video history, then the related video details. The local
+  // SQLite shim does not support Supabase's embedded relationship selects
+  // (e.g. `video:video_analyses(*)`), so we join in JS instead.
+  const { data: userVideosRaw, error } = await supabase
     .from('user_videos')
-    .select(`
-      *,
-      video:video_analyses(*)
-    `)
+    .select('*')
     .eq('user_id', user.id)
     .order('accessed_at', { ascending: false });
 
@@ -26,6 +28,18 @@ export default async function MyVideosPage() {
     console.error('Error fetching user videos:', JSON.stringify(error, null, 2));
     console.error('Error details:', { message: error.message, code: error.code, details: error.details, hint: error.hint });
   }
+
+  const rawList: any[] = userVideosRaw ?? [];
+  const videoIds = rawList.map((uv: any) => uv.video_id).filter(Boolean);
+  const videoMap: Record<string, any> = {};
+  if (videoIds.length > 0) {
+    const { data: videos } = await supabase
+      .from('video_analyses')
+      .select('*')
+      .in('id', videoIds);
+    for (const v of videos ?? []) videoMap[v.id] = v;
+  }
+  const userVideos = rawList.map((uv: any) => ({ ...uv, video: videoMap[uv.video_id] ?? null }));
 
   // Fetch user's favorite folders
   const { data: folders } = await supabase

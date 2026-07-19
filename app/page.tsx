@@ -235,6 +235,7 @@ function HomeContent() {
                     sizes="100px"
                     className="object-cover"
                     priority
+                    unoptimized
                   />
                 </div>
               </div>

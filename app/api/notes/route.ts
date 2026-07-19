@@ -51,7 +51,12 @@ async function handler(req: NextRequest) {
     const videoIdParam = searchParams.get('videoId');
 
     try {
-      const validated = getNotesQuerySchema.parse({ youtubeId, videoId: videoIdParam });
+      // searchParams.get() returns null for missing keys, but Zod .optional()
+      // only accepts undefined — convert explicitly.
+      const validated = getNotesQuerySchema.parse({
+        youtubeId: youtubeId ?? undefined,
+        videoId: videoIdParam ?? undefined,
+      });
 
       let targetVideoId: string | undefined;
 

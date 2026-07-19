@@ -1,165 +1,90 @@
-# LongCut
+# LongCut (Local Edition)
 
-LongCut turns long-form YouTube videos into a structured learning workspace. Paste a URL and the app generates highlight reels, timestamped AI answers, and a place to capture your own notes so you can absorb an hour-long video in minutes.
+> **Forked from [SamuelZ12/longcut](https://github.com/SamuelZ12/longcut)** (AGPL v3)  
+> Original author: [Samuel Z](https://github.com/SamuelZ12) — a Next.js 15 video learning workspace.
 
-## Overview
+A locally-deployed, single-user adaptation of LongCut that replaces cloud dependencies with a fully self-contained stack. Paste a YouTube URL, get AI-powered highlight reels, topic breakdowns, timestamped answers, and note-taking — all running on your own machine.
 
-The project is a Next.js 15 + React 19 application that routes text generation through provider adapters for MiniMax, xAI Grok, and Google Gemini, plus free YouTube transcript extraction with a polished UX. Gemini also remains available for image generation. Supabase provides authentication, persistence, rate limiting, and profile preferences. The experience is optimized for fast iteration using Turbopack, Tailwind CSS v4, and shadcn/ui components.
+## What's Different from Upstream
 
-## Feature Highlights
+| Area | Upstream | This Fork |
+|------|----------|-----------|
+| **Database** | Supabase (PostgreSQL, cloud) | SQLite (`node:sqlite`, local file) |
+| **Authentication** | Supabase Auth (email/social) | None — fixed local user, auto-login |
+| **AI Provider** | MiniMax / Grok / Gemini | DeepSeek (configurable) |
+| **Storage** | Supabase Storage | Not used (local images only) |
+| **Payments** | Stripe subscriptions | Disabled |
+| **Deployment** | Vercel (serverless) | Local dev (`pnpm dev -p 8080`) |
+| **Proxy** | Not needed | `https-proxy-agent` for YouTube access |
 
-- AI highlight reels with Smart (quality) and Fast (speed) generation modes, Play All playback, and theme-based re-generation.
-- AI-powered quick preview, structured summary, suggested questions, and memorable quotes surfaced in parallel.
-- AI chat grounded in the transcript with structured JSON responses, timestamp citations, and fallbacks when the provider rate-limits.
-- Transcript viewer that stays in sync with the YouTube player; click any sentence to jump or capture the quote.
-- Personal notes workspace with transcript, chat, and takeaway sources plus an `/all-notes` dashboard for cross-video review.
-- Authenticated library pages for saved analyses, favorites, generation limits, and Supabase-backed profile preferences.
-- Aggressive caching of previous analyses, background refresh tasks, and rate limits for anonymous vs. signed-in users.
-- Security middleware that enforces CSP headers, CSRF protection, body-size caps, and Supabase-backed rate limiting.
+Everything else — the AI highlight engine, transcript pipeline, note-taking workspace, chat UI — is unchanged from upstream.
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=SamuelZ12/tldw&type=date&legend=top-left)](https://www.star-history.com/#SamuelZ12/tldw&type=date&legend=top-left)
-
-## Architecture
-
-- Frontend stack: Next.js 15 App Router, React 19, TypeScript, Tailwind CSS v4, shadcn/ui, lucide-react, sonner toasts.
-- Backend runtime: Next.js serverless route handlers with `withSecurity` middleware for CSRF, input validation (Zod), and rate caps.
-- AI pipeline: `lib/ai-processing.ts` and `lib/ai-client.ts` orchestrate provider-agnostic prompts, structured output schemas, fallback handling, and transcript chunking via `lib/ai-providers/`, which currently includes MiniMax, Grok, and Gemini adapters.
-- Transcript & metadata: `/api/transcript` extracts public YouTube captions directly; `/api/video-info` fetches public video metadata from YouTube oEmbed with a minimal fallback.
-- Persistence: Supabase stores `video_analyses`, `user_videos` (history + favorites), `user_notes`, `profiles` (topic generation mode, profile data), and `rate_limits`.
-- Authentication: Supabase Auth with session refresh in `middleware.ts`; `AuthModal` drives sign-up prompts when limits are hit.
-- Security: Global middleware adds CSP/HSTS headers, CSRF tokens for stateful requests, hashed IP identifiers for anonymous rate limiting, and request body size guards.
-
-## Application Pages
-
-- `/` – Landing page with branded URL input, mode selector, and auth modal triggers when rate limits are reached.
-- `/analyze/[videoId]` – Primary workspace: YouTube player, highlight reels, theme selector, summary/chat/transcript/notes tabs, suggestions, and note-saving flows.
-- `/my-videos` – Auth-required library of previously analyzed videos with search, favorites, and quick resume.
-- `/all-notes` – Auth-required notebook that aggregates notes across videos with filtering, sorting, markdown rendering, and deletion.
-- `/settings` – Profile screen for updating name, password, viewing usage stats, and persisting preferred topic generation mode.
-
-## API Surface
-
-- Video ingestion: `/api/video-info`, `/api/transcript`, `/api/check-video-cache`, `/api/video-analysis`, `/api/save-analysis`, `/api/update-video-analysis`, `/api/link-video`.
-- AI generation: `/api/generate-topics`, `/api/generate-summary`, `/api/quick-preview`, `/api/suggested-questions`, `/api/top-quotes`.
-- Conversational tools: `/api/chat` (provider-agnostic chat with citations) and `/api/check-limit` for pre-flight rate checks.
-- User data: `/api/notes`, `/api/notes/all`, `/api/toggle-favorite`.
-- Security utilities: `/api/csrf-token` and the shared `withSecurity` middleware (allowed methods, rate limits, CSRF validation).
-
-## Directory Layout
-
-```
-.
-├── app/
-│   ├── api/                    # Route handlers for AI, caching, notes, auth, etc.
-│   ├── analyze/[videoId]/      # Client page for the analysis workspace
-│   ├── all-notes/              # Notes dashboard (client component)
-│   ├── my-videos/              # Saved video list + favorites
-│   ├── settings/               # Account settings and profile form
-│   ├── auth/                   # Auth UI fragments
-│   ├── layout.tsx              # Root layout with Auth & theme providers
-│   └── page.tsx                # Landing page
-├── components/
-│   ├── ai-chat.tsx             # Transcript-aware chat UI
-│   ├── highlights-panel.tsx    # Highlight reel cards + controls
-│   ├── notes-panel.tsx         # Note capture + listing
-│   ├── right-column-tabs.tsx   # Summary / Chat / Transcript / Notes tabs
-│   ├── youtube-player.tsx      # Player wrapper with shared playback state
-│   └── ui/                     # Reusable shadcn/ui primitives
-├── contexts/
-│   └── auth-context.tsx        # Supabase auth provider
-├── lib/
-│   ├── ai-client.ts            # Provider-agnostic AI entry point
-│   ├── ai-processing.ts        # Prompt building, transcript chunking, candidate pooling
-│   ├── ai-providers/           # MiniMax, Grok, Gemini adapters + registry
-│   ├── notes-client.ts         # CSRF-protected note helpers
-│   ├── rate-limiter.ts         # Supabase-backed request limiting
-│   ├── security-middleware.ts  # Common security wrapper for route handlers
-│   ├── supabase/               # Browser/server clients + middleware helpers
-│   ├── validation.ts           # Zod schemas shared across endpoints
-│   └── utils.ts                # URL parsing, formatting, color helpers, etc.
-├── public/                     # Static assets (logos, SVGs)
-├── supabase/
-│   └── migrations/             # Database migrations (e.g., topic_generation_mode column)
-├── CLAUDE.md                   # Extended architecture + contributor handbook
-└── next.config.ts              # Remote image allowlist, Turbopack rules, webpack tweaks
-```
-
-## Local Development
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ (Next.js 15 requires 18.18 or newer)
-- `npm` (repo uses package-lock.json), though `pnpm` or `yarn` also work
-- Supabase project (Auth + Postgres), a MiniMax API key for text generation, and a Gemini API key if you want image generation enabled
+- **Node.js 22+** (the app uses `node:sqlite`, available since 22.x)
+- **pnpm** (the project uses pnpm as package manager)
+- A **DeepSeek** API key (or configure another provider via `AI_PROVIDER`)
+- A proxy or VPN to access YouTube (set `GLOBAL_AGENT_HTTP_PROXY` in `.env.local`)
 
-### 1. Clone & Install
+### Setup
 
 ```bash
-git clone https://github.com/SamuelZ12/longcut.git
+git clone https://github.com/huang-yi-dae/longcut.git
 cd longcut
-npm install
+pnpm install
 ```
 
-### 2. Configure Environment
+### Configure Environment
 
-Create `.env.local` in the repo root:
+Create `.env.local` in the project root:
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `MINIMAX_API_KEY` | yes* | MiniMax API key for text generation when `AI_PROVIDER=minimax` (recommended) |
-| `MINIMAX_API_BASE_URL` | optional | Override the MiniMax API base URL |
-| `XAI_API_KEY` | optional | xAI Grok API key for fallback or switching providers |
-| `GEMINI_API_KEY` | yes** | Google Gemini API key for `app/api/generate-image/route.ts`; also usable as a text provider |
-| `NEXT_PUBLIC_SUPABASE_URL` | yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | Supabase anonymous key |
-| `CSRF_SALT` | yes | Long random string used to sign CSRF tokens |
-| `AI_PROVIDER` | recommended | `minimax`, `grok`, or `gemini`; determines which server-side text provider adapter is used |
-| `NEXT_PUBLIC_AI_PROVIDER` | recommended | Set this to match `AI_PROVIDER` for consistent client/server provider behavior in Phase 1 |
-| `AI_DEFAULT_MODEL` | recommended | Override provider default model (for Phase 1, `MiniMax-M2.7`) |
-| `NEXT_PUBLIC_AI_MODEL` | optional | Client-side model hint for UI/config display; does not control server routing by itself |
-| `NEXT_PUBLIC_APP_URL` | optional | Canonical app URL (defaults to `http://localhost:3000`) |
-| `NEXT_PUBLIC_ENABLE_TRANSLATION_SELECTOR` | optional | Set to `true` to show the transcript translation dropdown (hidden otherwise) |
-| `YOUTUBE_API_KEY` | optional | Enables additional metadata when available |
-| `UNLIMITED_VIDEO_USERS` | optional | Comma-separated emails or user IDs allowed to bypass daily limits |
+```env
+# AI provider (DeepSeek recommended)
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-your-key-here
 
-<sup>\*</sup> For the Phase 1 rollout, set `AI_PROVIDER=minimax`, `NEXT_PUBLIC_AI_PROVIDER=minimax`, and provide `MINIMAX_API_KEY` for text generation. `XAI_API_KEY` is optional if you want Grok available as a fallback or alternate provider.
+# App URL (default port 8080 to avoid conflicts with other Next.js projects)
+NEXT_PUBLIC_APP_URL=http://localhost:8080
 
-<sup>\**</sup> `GEMINI_API_KEY` is still required if image generation should work, because `app/api/generate-image/route.ts` remains Gemini-backed.
+# CSRF protection (generate with: openssl rand -base64 32)
+CSRF_SALT=longcut_dev_salt_2026_random_string
 
-> Recommended Phase 1 setup: `AI_PROVIDER=minimax`, `NEXT_PUBLIC_AI_PROVIDER=minimax`, `AI_DEFAULT_MODEL=MiniMax-M2.7`, `MINIMAX_API_KEY=...`. Keep `GEMINI_API_KEY` set if you want image generation, and optionally keep `XAI_API_KEY` available for Grok fallback/testing.
+# YouTube proxy (Node.js fetch doesn't use system proxy)
+GLOBAL_AGENT_HTTP_PROXY=http://127.0.0.1:10090
+```
 
-> Generate a unique `CSRF_SALT` (e.g., `openssl rand -base64 32`). `UNLIMITED_VIDEO_USERS` entries are normalized to lowercase.
-
-### 3. Supabase Setup
-
-1. Run SQL migrations in `supabase/migrations/` using the Supabase SQL editor or CLI.
-2. Ensure the following tables exist (structure documented in `CLAUDE.md`): `video_analyses`, `user_videos`, `user_notes`, `profiles`, and `rate_limits`.
-3. Add the Postgres function `upsert_video_analysis_with_user_link` that stores analyses and links them to a user in `user_videos` (the production project contains the reference implementation—export it or recreate it before local testing).
-4. Enable email OTP/auth providers required by your login flow and configure redirect URLs to match `NEXT_PUBLIC_APP_URL`.
-
-### 4. Run the App
+### Run
 
 ```bash
-npm run dev        # starts Next.js with Turbopack on http://localhost:3000
-npm run lint       # optional: run lint checks (ESLint v9)
+pnpm dev       # http://localhost:8080
 ```
 
-The dev server reaches out to YouTube and your configured AI provider(s) directly.
+The app auto-logs you in as a local user. No sign-up, no passwords. Data is stored in `data/local.db` (gitignored).
 
-## Developer Notes
+## Architecture (unchanged from upstream)
 
-- All state-changing requests must go through `csrfFetch` so that `withSecurity` can validate the token.
-- Rate limiting records are stored in the `rate_limits` table; clear it when resetting dev limits.
-- Topic generation mode (`smart` vs `fast`) is persisted per-profile and synced via `useModePreference`.
-- `middleware.ts` refreshes Supabase sessions and adds security headers—keep it enabled when deploying to Vercel.
-- Detailed architecture notes, prompts, and database expectations live in `CLAUDE.md`; review it before larger changes.
+LongCut is a Next.js 15 App Router application with:
 
-## Contributing
+- **AI pipeline**: Provider-agnostic prompts, structured output schemas (Zod), transcript chunking, and fallback handling via `lib/ai-providers/`.
+- **Transcript engine**: Direct YouTube caption extraction with multi-client fallback (Android → Web → iOS).
+- **Workspace UI**: YouTube player sync, highlight reels with Play All, theme-based re-generation, AI chat with citations, notes dashboard.
+- **Security**: CSP headers, CSRF tokens, Zod input validation, request body size guards.
 
-Issues and PRs are welcome. This repo uses the [Anthropic Claude Code Action](https://github.com/anthropics/claude-code-action) for automated pull-request reviews guided by `CLAUDE.md`. Please run `npm run lint` and double-check Supabase migrations before opening a PR.
+## Project Structure
+
+```
+app/          # Next.js App Router (pages, API routes, Server Actions)
+components/   # React components (chat, highlights, notes, player, UI primitives)
+contexts/     # Auth context (fixed local user)
+lib/          # Business logic (AI, DB, proxy, validation, providers)
+scripts/      # Dev tools and integration tests
+types/        # TypeScript ambient declarations
+```
 
 ## License
 
-Distributed under the [GNU Affero General Public License v3.0](LICENSE).
+This project is distributed under the GNU Affero General Public License v3.0 (AGPL v3), the same license as the upstream project. See [LICENSE](LICENSE) for details.
+
+Original copyright: SamuelZ12/longcut. Modifications copyright: 2026 huang-yi-dae.

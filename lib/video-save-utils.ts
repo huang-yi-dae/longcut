@@ -44,31 +44,39 @@ export async function saveVideoAnalysisWithRetry(
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const { data, error } = await supabase.rpc('insert_video_analysis_server', {
-        p_youtube_id: params.youtubeId,
-        p_title: params.title,
-        p_author: params.author,
-        p_duration: params.duration,
-        p_thumbnail_url: params.thumbnailUrl,
-        p_transcript: params.transcript,
-        p_topics: params.topics,
-        p_summary: params.summary ?? null,
-        p_suggested_questions: params.suggestedQuestions ?? null,
-        p_model_used: params.modelUsed ?? null,
-        p_user_id: params.userId ?? null,
-        p_language: params.language ?? null,
-        p_available_languages: params.availableLanguages ?? null
-      });
+      const payload = {
+        youtube_id: params.youtubeId,
+        title: params.title,
+        author: params.author,
+        duration: params.duration,
+        thumbnail_url: params.thumbnailUrl,
+        transcript: params.transcript,
+        topics: params.topics,
+        summary: params.summary ?? null,
+        suggested_questions: params.suggestedQuestions ?? null,
+        model_used: params.modelUsed ?? null,
+        created_by: params.userId ?? null,
+        language: params.language ?? null,
+        available_languages: params.availableLanguages ?? null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) {
-        throw error;
+      const { data, error } = await supabase
+        .from('video_analyses')
+        .upsert(payload, { onConflict: 'youtube_id' })
+        .select('id')
+        .maybeSingle();
+
+      if (error || !data) {
+        throw error ?? new Error('No data returned from video_analyses upsert');
       }
 
       return {
         success: true,
-        videoId: data as string,
+        videoId: (data as { id: string }).id,
         error: null,
-        retriedCount: attempt
+        retriedCount: attempt,
       };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);

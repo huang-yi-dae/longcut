@@ -418,48 +418,33 @@ export async function consumeVideoCreditAtomic({
 }> {
   const supabase = client ?? (await createClient());
 
-  // Call atomic RPC function that handles check + consume in single transaction
-  const { data, error } = await supabase.rpc('consume_video_credit_atomically', {
-    p_user_id: userId,
-    p_youtube_id: youtubeId,
-    p_identifier: identifier ?? `user:${userId}`,
-    p_subscription_tier: subscription.tier,
-    p_base_limit: TIER_LIMITS[subscription.tier],
-    p_period_start: statsSnapshot.periodStart.toISOString(),
-    p_period_end: statsSnapshot.periodEnd.toISOString(),
-    p_video_id: videoAnalysisId ?? null,
-    p_counted: counted,
-  });
+  // Local deployment: record the generation directly (no Stripe/RPC).
+  const { data, error } = await supabase
+    .from('video_generations')
+    .insert({
+      user_id: userId,
+      identifier: identifier ?? `user:${userId}`,
+      youtube_id: youtubeId,
+      video_id: videoAnalysisId ?? null,
+      counted_toward_limit: counted,
+      subscription_tier: subscription.tier,
+      created_at: new Date().toISOString(),
+    })
+    .select('id')
+    .maybeSingle();
 
-  if (error) {
-    console.error('Atomic credit consumption failed:', error);
-    return { success: false, error: 'ATOMIC_CONSUMPTION_FAILED' };
-  }
-
-  // RPC returns jsonb with: { allowed, reason, generation_id, used_topup, ... }
-  const result = data as any;
-
-  if (!result || !result.allowed) {
-    return {
-      success: false,
-      allowed: false,
-      reason: result?.reason || 'UNKNOWN_ERROR',
-      error: result?.error || result?.reason,
-    };
-  }
-
-  // Log deduplication for monitoring
-  if (result.deduplicated) {
-    console.log(`[subscription-manager] Deduplicated credit consumption for user ${userId}, video ${youtubeId}`);
+  if (error || !data) {
+    console.error('Failed to record video generation:', error);
+    return { success: false, error: 'FAILED_TO_RECORD_GENERATION' };
   }
 
   return {
     success: true,
     allowed: true,
-    generationId: result.generation_id,
-    usedTopup: Boolean(result.used_topup),
-    reason: result.reason,
-    deduplicated: Boolean(result.deduplicated),
+    generationId: (data as { id: string }).id,
+    usedTopup: false,
+    reason: 'OK',
+    deduplicated: false,
   };
 }
 
@@ -506,36 +491,28 @@ export async function addTopupCredits(
     return { success: false, error: 'INVALID_AMOUNT' };
   }
 
+  // Local deployment: update the profile directly (no Stripe/RPC).
   const supabase = options?.client ?? (await createClient());
 
-  const { error } = await supabase.rpc('increment_topup_credits', {
-    p_user_id: userId,
-    p_amount: amount,
-  });
+  const { data: profile, error: fetchError } = await supabase
+    .from('profiles')
+    .select('topup_credits')
+    .eq('id', userId)
+    .maybeSingle();
 
-  if (error) {
-    console.error('increment_topup_credits RPC failed, falling back to manual update:', error);
+  if (fetchError || !profile) {
+    console.error('Error fetching profile for top-up:', fetchError);
+    return { success: false, error: 'PROFILE_NOT_FOUND' };
+  }
 
-    const { data: profile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('topup_credits')
-      .eq('id', userId)
-      .maybeSingle();
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ topup_credits: (profile.topup_credits ?? 0) + amount })
+    .eq('id', userId);
 
-    if (fetchError || !profile) {
-      console.error('Error fetching profile for manual top-up:', fetchError);
-      return { success: false, error: 'PROFILE_NOT_FOUND' };
-    }
-
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ topup_credits: (profile.topup_credits ?? 0) + amount })
-      .eq('id', userId);
-
-    if (updateError) {
-      console.error('Failed to update top-up credits manually:', updateError);
-      return { success: false, error: 'TOPUP_UPDATE_FAILED' };
-    }
+  if (updateError) {
+    console.error('Failed to update top-up credits:', updateError);
+    return { success: false, error: 'TOPUP_UPDATE_FAILED' };
   }
 
   return { success: true };

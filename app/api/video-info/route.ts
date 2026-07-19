@@ -3,6 +3,7 @@ import { extractVideoId } from '@/lib/utils';
 import { withSecurity, SECURITY_PRESETS } from '@/lib/security-middleware';
 import { getMockVideoInfo, shouldUseMockVideoInfo } from '@/lib/mock-data';
 import { fetchYouTubeVideoInfo } from '@/lib/video-info-provider';
+import { proxyFetch } from '@/lib/proxy-fetch';
 
 async function handler(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ async function handler(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(await fetchYouTubeVideoInfo(videoId));
+    return NextResponse.json(await fetchYouTubeVideoInfo(videoId, proxyFetch));
   } catch (error) {
     console.error('[VIDEO-INFO] Top-level error:', {
       error: error instanceof Error ? error.message : String(error),

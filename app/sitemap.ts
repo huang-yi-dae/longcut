@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Generate URLs for all video pages
   const videoUrls: MetadataRoute.Sitemap = (videos || [])
-    .map(video => {
+    .map((video: { slug: string | null; youtube_id: string | null; title: string | null; updated_at: string | null }) => {
       const slug = normalizeSlug(video);
 
       if (!slug) {
@@ -35,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       return {
         url: `https://longcut.ai/v/${slug}`,
-        lastModified: new Date(video.updated_at),
+        lastModified: new Date(video.updated_at ?? Date.now()),
         changeFrequency: 'monthly' as const,
         priority: 0.8
       };

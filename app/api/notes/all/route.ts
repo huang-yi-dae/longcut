@@ -54,28 +54,31 @@ async function handler(req: NextRequest) {
 
   if (req.method === 'GET') {
     try {
-      // Fetch all notes for the user with video metadata
-      const { data, error } = await supabase
+      // Fetch all notes for the user, then join video metadata in JS.
+      // The local SQLite shim does not support Supabase's relationship
+      // hints (e.g. `video_analyses!inner(cols)`).
+      const { data: notesRaw, error } = await supabase
         .from('user_notes')
-        .select(`
-          *,
-          video_analyses!inner(
-            youtube_id,
-            title,
-            author,
-            thumbnail_url,
-            duration,
-            slug
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        throw error;
+      if (error) throw error;
+
+      const rawList: any[] = notesRaw ?? [];
+      const videoIds = rawList.map((n: any) => n.video_id).filter(Boolean);
+      const videoMap: Record<string, any> = {};
+      if (videoIds.length > 0) {
+        const { data: videos } = await supabase
+          .from('video_analyses')
+          .select('id, youtube_id, title, author, thumbnail_url, duration, slug')
+          .in('id', videoIds);
+        for (const v of videos ?? []) videoMap[v.id] = v;
       }
 
-      const notes = (data || []).map(mapNoteWithVideo);
+      const notes = rawList.map((n: any) =>
+        mapNoteWithVideo({ ...n, video_analyses: videoMap[n.video_id] ?? null }),
+      );
 
       return NextResponse.json({ notes });
     } catch (error) {

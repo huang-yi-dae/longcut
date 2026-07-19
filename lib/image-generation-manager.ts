@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import { db } from '@/lib/db';
 import type { SubscriptionTier, UserSubscription } from '@/lib/subscription-manager';
 import { getUserSubscriptionStatus } from '@/lib/subscription-manager';
 
@@ -68,24 +69,21 @@ async function fetchImageUsageInPeriod(
   periodEnd: Date,
   options?: { client?: DatabaseClient }
 ): Promise<number> {
-  const supabase = options?.client ?? (await createClient());
+  try {
+    const rows = db
+      .prepare(
+        `SELECT SUM(CASE WHEN counted_toward_limit = 1 THEN 1 ELSE 0 END) AS counted
+         FROM image_generations
+         WHERE user_id = ? AND created_at >= ? AND created_at < ?
+         GROUP BY subscription_tier`
+      )
+      .all(userId, periodStart.toISOString(), periodEnd.toISOString()) as Array<{ counted: number }>;
 
-  const { data, error } = await supabase.rpc('get_image_usage_breakdown', {
-    p_user_id: userId,
-    p_start: periodStart.toISOString(),
-    p_end: periodEnd.toISOString(),
-  });
-
-  if (error) {
-    console.error('Failed to fetch image usage breakdown:', error);
+    return rows.reduce((sum, row) => sum + Number(row.counted ?? 0), 0);
+  } catch (error) {
+    console.error('Failed to fetch image usage from local DB:', error);
     return 0;
   }
-
-  if (!Array.isArray(data)) {
-    return 0;
-  }
-
-  return data.reduce((sum, row) => sum + Number(row.counted ?? 0), 0);
 }
 
 export async function getImageUsageStats(
@@ -190,26 +188,23 @@ export async function consumeImageCreditAtomic({
 }): Promise<{ success: boolean; generationId?: string; error?: string }> {
   const supabase = client ?? (await createClient());
 
-  const { data, error } = await supabase.rpc('consume_image_credit_atomically', {
-    p_user_id: userId,
-    p_youtube_id: youtubeId,
-    p_subscription_tier: subscription.tier,
-    p_base_limit: IMAGE_TIER_LIMITS[subscription.tier],
-    p_period_start: statsSnapshot.periodStart.toISOString(),
-    p_period_end: statsSnapshot.periodEnd.toISOString(),
-    p_video_id: videoAnalysisId ?? null,
-    p_counted: counted,
-  });
+  const { data, error } = await supabase
+    .from('image_generations')
+    .insert({
+      user_id: userId,
+      youtube_id: youtubeId,
+      video_id: videoAnalysisId ?? null,
+      counted_toward_limit: counted,
+      subscription_tier: subscription.tier,
+      created_at: new Date().toISOString(),
+    })
+    .select('id')
+    .maybeSingle();
 
-  if (error) {
-    console.error('Atomic image credit consumption failed:', error);
-    return { success: false, error: 'ATOMIC_CONSUMPTION_FAILED' };
+  if (error || !data) {
+    console.error('Failed to record image generation:', error);
+    return { success: false, error: 'FAILED_TO_RECORD_GENERATION' };
   }
 
-  const result = data as any;
-  if (!result || !result.allowed) {
-    return { success: false, error: result?.reason ?? 'LIMIT_REACHED' };
-  }
-
-  return { success: true, generationId: result.generation_id };
+  return { success: true, generationId: (data as { id: string }).id };
 }

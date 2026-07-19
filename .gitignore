@@ -29,6 +29,9 @@
 # supabase
 supabase/.temp/
 
+# local SQLite database (generated at runtime)
+/data/
+
 # documentation (local only)
 docs/
 .worktrees/
@@ -53,3 +56,6 @@ yarn-error.log*
 next-env.d.ts
 
 CLAUDE.md
+
+# local project memory (personal learning notes)
+.workbuddy/

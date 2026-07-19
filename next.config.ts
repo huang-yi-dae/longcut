@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // node:sqlite is a built-in module used by the local backend (lib/db.ts).
+  // Keep it external so Next.js doesn't try to bundle it.
+  serverExternalPackages: ['node:sqlite'],
   eslint: {
     // Avoid ESLint patch incompatibility failures during CI/production builds
     ignoreDuringBuilds: true,

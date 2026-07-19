@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createClient } from '@/lib/supabase/server';
+import { db } from '@/lib/db';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -35,7 +35,8 @@ export function getPeriodBounds(subStart: Date): PeriodBounds {
 
 /**
  * Aggregates usage for a user inside the provided window.
- * Relies on the Supabase RPC `get_usage_breakdown` to avoid downloading every row.
+ * Local deployment: queries the SQLite `video_generations` table directly
+ * (replaces the former Supabase RPC `get_usage_breakdown`).
  */
 export async function fetchUsageBreakdown({
   userId,
@@ -43,19 +44,6 @@ export async function fetchUsageBreakdown({
   end,
   client,
 }: UsageInPeriodParams): Promise<UsageBreakdown> {
-  const supabase = client ?? (await createClient());
-
-  const { data, error } = await supabase.rpc('get_usage_breakdown', {
-    p_user_id: userId,
-    p_start: start.toISOString(),
-    p_end: end.toISOString(),
-  });
-
-  if (error) {
-    console.error('Failed to compute usage breakdown:', error);
-    throw error;
-  }
-
   const breakdown: UsageBreakdown = {
     counted: 0,
     cached: 0,
@@ -63,21 +51,36 @@ export async function fetchUsageBreakdown({
     byTier: {},
   };
 
-  if (!Array.isArray(data)) {
-    return breakdown;
+  try {
+    const rows = db
+      .prepare(
+        `SELECT subscription_tier AS subscription_tier,
+                SUM(CASE WHEN counted_toward_limit = 1 THEN 1 ELSE 0 END) AS counted,
+                SUM(CASE WHEN counted_toward_limit = 0 THEN 1 ELSE 0 END) AS cached
+         FROM video_generations
+         WHERE user_id = ? AND created_at >= ? AND created_at < ?
+         GROUP BY subscription_tier`
+      )
+      .all(userId, start.toISOString(), end.toISOString()) as Array<{
+      subscription_tier: string | null;
+      counted: number;
+      cached: number;
+    }>;
+
+    for (const row of rows) {
+      const tier = row.subscription_tier ?? 'unknown';
+      const counted = Number(row.counted ?? 0);
+      const cached = Number(row.cached ?? 0);
+
+      breakdown.byTier[tier] = { counted, cached };
+      breakdown.counted += counted;
+      breakdown.cached += cached;
+    }
+
+    breakdown.total = breakdown.counted + breakdown.cached;
+  } catch (error) {
+    console.error('Failed to compute usage breakdown from local DB:', error);
   }
-
-  for (const row of data) {
-    const tier = row.subscription_tier ?? 'unknown';
-    const counted = Number(row.counted ?? 0);
-    const cached = Number(row.cached ?? 0);
-
-    breakdown.byTier[tier] = { counted, cached };
-    breakdown.counted += counted;
-    breakdown.cached += cached;
-  }
-
-  breakdown.total = breakdown.counted + breakdown.cached;
 
   return breakdown;
 }

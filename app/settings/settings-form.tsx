@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { updateProfileAction } from '@/app/actions/update-profile'
 import { openBillingPortal as openPortalAction, startCheckout } from '@/lib/stripe-actions'
 import { UsageIndicator } from '@/components/usage-indicator'
 import { Button } from '@/components/ui/button'
@@ -171,9 +172,8 @@ function formatStatus(subscription: SubscriptionSummary | null): string {
 export default function SettingsForm({ user, profile, videoCount, subscription }: SettingsFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const hasSupabaseConfig = !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const supabase = useMemo(() => hasSupabaseConfig ? createClient() : null, [])
+  // Local deployment: the stub client works without any env config.
+  const supabase = createClient()
 
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [newPassword, setNewPassword] = useState('')
@@ -382,16 +382,10 @@ export default function SettingsForm({ user, profile, videoCount, subscription }
 
     setLoading(true)
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: fullName,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id)
+    const result = await updateProfileAction(fullName)
 
-    if (error) {
-      toast.error(error.message)
+    if (result.error) {
+      toast.error(result.error)
     } else {
       toast.success('Settings updated successfully!')
       router.refresh()

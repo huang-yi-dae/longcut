@@ -31,7 +31,7 @@ interface UserVideo {
   is_favorite: boolean;
   folder_id: string | null;
   notes: string | null;
-  video: VideoAnalysis;
+  video: VideoAnalysis | null;  // may be null if video_analyses row is missing
 }
 
 interface VideoGridProps {
@@ -87,6 +87,10 @@ export function VideoGrid({ videos, folders: initialFolders }: VideoGridProps) {
   }, []);
 
   const filteredVideos = videos.filter(userVideo => {
+    // Skip rows whose video_analyses join failed (e.g. stale user_videos row
+    // left over from a failed analysis before the local SQLite migration).
+    if (!userVideo.video) return false;
+
     const matchesSearch = userVideo.video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           userVideo.video.author?.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -191,7 +195,8 @@ export function VideoGrid({ videos, folders: initialFolders }: VideoGridProps) {
     return acc;
   }, {} as Record<string, number>);
   const unfiledCount = videos.filter(v => !v.folder_id).length;
-  const favoritesCount = videos.filter(v => favoriteStatuses[v.id]).length;
+  // Count favorites only for videos that successfully joined (non-null).
+  const favoritesCount = videos.filter(v => v.video && favoriteStatuses[v.id]).length;
 
   return (
     <>
